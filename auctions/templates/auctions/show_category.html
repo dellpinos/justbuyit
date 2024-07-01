@@ -1,0 +1,34 @@
+{% extends 'auctions/layout.html' %}
+{% load static %}
+
+{% block title %}
+  {{ category.title }}
+{% endblock %}
+
+{% block body %}
+  <h2>{{ category.title }}</h2>
+  <div class="listings__container">
+    {% if listings %}
+      {% for listing in listings %}
+        <a href=" {% url 'show_listing' listing.id %}" class="listings__item">
+          <div class="listings__img-container">
+            {% if listing.image %}
+              <img class="listings__img" src="{{ listing.image }}" alt="{{ listing.title }} Image" />
+            {% else %}
+              <img class="listings__img--icon" src="{% static 'auctions/img/image-icon.svg' %}" alt="{{ listing.title }} Image" />
+              <p>There isn't an image for {{ listing.title }}</p>
+            {% endif %}
+          </div>
+          <div class="listings__opts">
+            <h3>{{ listing.title }}</h3>
+            <p class="ellipsis-4">{{ listing.description }}</p>
+            <p>Price: ${{ listing.actual_price }}</p>
+            <p>Created: {{ listing.created_at }}</p>
+          </div>
+        </a>
+      {% endfor %}
+    {% else %}
+      <p class="listings__empty">There isn't anything to show.</p>
+    {% endif %}
+  </div>
+{% endblock %}

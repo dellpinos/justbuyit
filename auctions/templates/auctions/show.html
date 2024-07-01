@@ -1,0 +1,122 @@
+{% extends 'auctions/layout.html' %}
+{% load static %}
+
+{% block title %}
+  Welcome!
+{% endblock %}
+
+{% block body %}
+
+  <div class="listing-show__container">
+    {% if user.username == listing.user.username and listing.price != actual_price %}
+        <p class="listings__empty m-0">The edition is not available because there is at least one offer for this listing</p>
+    {% endif %}
+    <div class="listing-show__item">
+        {% if user.username != listing.user.username %}
+        <form method="POST" class="listing-show__watch" action="{% url 'watch_listing' %}">
+            {% csrf_token %}
+            <input type="hidden" name="listing_id" value="{{ listing.id }}" >
+
+            {% if not watching %}
+            <input type="hidden" name="listing_watch" value="1" >
+            <button type="submit">
+                <img  src="{% static 'auctions/img/heart-empty.svg' %}" alt="Watchlist Icon">
+            </button>
+            {% else %}
+            <input type="hidden" name="listing_watch" value="0" >
+            <button type="submit">
+                <img  src="{% static 'auctions/img/heart-full.svg' %}" alt="Watchlist Icon">
+            </button>
+            {% endif %}
+        </form>
+        {% elif listing.price == actual_price %}
+            <a href="{% url 'edit_listing' listing.id %}" class="listing-show__edit">Edit</a>
+        {% endif %}
+
+        <div class="listing-show__img-container">
+            {%if listing.image %}
+                <img class="listing-show__img" src="{{ listing.image }}" alt="{{ listing.title }} Image" />
+            {% else %}
+                <img class="listing-show__img--icon" src="{% static 'auctions/img/image-icon.svg' %}" alt="{{ listing.title }} Image" />
+                <p>There isn't an image for {{ listing.title }}</p>
+            {% endif %}
+        </div>
+      <div class="listing-show__opts-container">
+        <div class="listing-show__opts">
+            <div class="">
+                <h3>{{ listing.title }}</h3>
+                <p class="ellipsis-2">{{ listing.description }}</p>
+            </div>
+            <p class="listing-show__price">${{ actual_price }}</p>
+
+            {% if user.username != listing.user.username %}
+                <form method="POST" class="listing-show__bind" action="{% url 'bid_listing' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                    <input type="number" placeholder="10" name="bid" max="99999999">
+                    <button type="submit" class="btn">Place Bid</button>
+                </form>
+
+            {% else %}
+                <form method="POST" class="listing-show__bind" action="{% url 'close_listing' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                    <button type="submit" class="btn btn-red">Close Listing</button>
+                </form>
+
+            {% endif %}
+
+            <div>
+                <p>Created: {{ listing.created_at }}</p>
+                <p>Listed by: <span class="c-orange">{{ listing.user }}</span></p>
+            </div>
+          </div>
+      </div>
+    </div>
+    <div class="listing-show__details">
+        <h3>Details</h3>
+        <div>
+            <p>Listed by: <span class="c-orange">{{ listing.user }}</span></p>
+            {% if listing.category%}
+                <p>Category: <span class="c-orange">{{ listing.category.title  }}</span></p>
+            {% else %}
+                <p>Category: <span class="c-orange">No Category</span></p>
+            {% endif %}
+            <p class="mt-20">{{ listing.description }}</p>
+
+        </div>
+    </div>
+    {% if user.username != listing.user.username and not has_commented %}
+        <div class="listing-show__comments">
+            <h3>New Comment</h3>
+            <form class="form listing-show__comment-form" method="POST" action="{% url 'create_comment' %}">
+                {% csrf_token %}
+                <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                <label for="comment">Add a comment:</label>
+                <textarea name="comment" id="comment" placeholder="Leave your comment here"></textarea>
+                <div class="btn-cont-left">
+                    <button class="btn">New Comment</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    <div class="listing-show__comments">
+        <h3>Comments</h3>
+
+        {% for comment in comments %}
+        <div>
+            <p class="mt-20">{{ comment.message }}</p>
+            <p class="c-orange">{{ comment.user }}</p>
+            <p>{{ comment.created_at }}</p>
+
+        </div>
+        {% empty %}
+            <p class="listings__empty">There aren't comments yet</p>
+        {% endfor %}
+    </div>
+    {% if has_commented %}
+    <p class="listings__empty">You have already commented</p>
+    {% endif %}
+  </div>
+{% endblock %}

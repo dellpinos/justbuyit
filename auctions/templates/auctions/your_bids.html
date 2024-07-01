@@ -1,0 +1,43 @@
+{% extends 'auctions/layout.html' %}
+{% load static %}
+
+{% block title %}
+  Your Bids
+{% endblock %}
+
+{% block body %}
+  <h2>Your Bids</h2>
+  <div class="listings__container">
+    {% if listings %}
+      {% for listing in listings %}
+
+        <a href=" {% url 'show_listing' listing.id %}" class="listings__item">
+          <div class="listings__img-container">
+            {% if listing.image %}
+              <img class="listings__img" src="{{ listing.image }}" alt="{{ listing.title }} Image" />
+            {% else %}
+              <img class="listings__img--icon" src="{% static 'auctions/img/image-icon.svg' %}" alt="{{ listing.title }} Image" />
+              <p>There isn't an image for {{ listing.title }}</p>
+            {% endif %}
+          </div>
+          <div class="listings__opts">
+            <h3>{{ listing.title }}</h3>
+            <p class="ellipsis-4">{{ listing.description }}</p>
+            <p>Price: ${{ listing.actual_price }}</p>
+            <p>Created: {{ listing.created_at }}</p>
+
+
+            {% if listing.won %}
+                <p class="c-green">Closed Listing. You won this Auction.</p>
+            {% elif listing.losing %}
+                <p class="c-red">Your bid has been outbid.</p>
+            {% endif %}
+
+          </div>
+        </a>
+      {% endfor %}
+    {% else %}
+      <p class="listings__empty">There isn't anything to show</p>
+    {% endif %}
+  </div>
+{% endblock %}

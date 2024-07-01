@@ -1,0 +1,53 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>JustBuyIt - 
+      {% block title %}
+
+      {% endblock %}
+    </title>
+    <meta name="description" content="Auctions Site">
+    <link rel="icon" href="{% static 'auctions/img/shopping.svg' %}" type="image/x-icon">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <link href="{% static 'auctions/styles.css' %}" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="flex-row">
+        <a href="{% url 'index' %}"><h1 class="header__heading">Just<span class="c-blue">Buy</span>It<span class="c-blue">!</span></h1></a>
+        {% if user.is_authenticated %}
+          <div class="flex-row">
+            <p class="header__name">Signed in as {{ user.username }}</p>
+            <a class="header__nav-link" href="{% url 'logout' %}">Log Out</a>
+          </div>
+        {% else %}
+        <div class="flex-row">
+          <p class="header__name">Not signed in</p>
+          <a class="header__nav-link" href="{% url 'login' %}">Log In</a>
+          <a class="header__nav-link" href="{% url 'register' %}">Register</a>
+        </div>
+        {% endif %}
+      </div>
+      <nav class="header__nav">
+        <a class="header__nav-link {% if request.path == '/' %} header__nav-link--activo {% endif %}" href="{% url 'index' %}">Active Listings</a>
+        <a class="header__nav-link {% if request.path == '/categories' %} header__nav-link--activo {% endif %}" href="{% url 'index_category' %}">Categories</a>
+        {% if user.is_authenticated %}
+          <a class="header__nav-link {% if request.path == '/listing/create' %} header__nav-link--activo {% endif %}" href="{% url 'create_listing' %}">Create Listing</a>
+          <a class="header__nav-link {% if request.path == '/listing/your_listings/show' %} header__nav-link--activo {% endif %}" href="{% url 'your_listings' %}">Your Listings</a>
+          <a class="header__nav-link {% if request.path == '/listing/bid/your_bids' %} header__nav-link--activo {% endif %}" href="{% url 'your_bids' %}">Your Bids</a>
+          <a class="header__nav-link {% if request.path == '/listing/watch/watchlist' %} header__nav-link--activo {% endif %}" href="{% url 'watchlist' %}">Watchlist</a>
+        {% endif %}
+      </nav>
+    </header>
+    <main>
+      {% block body %}
+
+      {% endblock %}
+    </main>
+  </body>
+</html>
