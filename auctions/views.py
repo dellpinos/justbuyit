@@ -7,8 +7,8 @@ from django.urls import reverse
 from django import forms
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Q, Max, F
-
+from django.db.models import Count, Q, Max, F, OuterRef, Subquery
+from django.utils import timezone
 
 
 from .models import User, Listing, Comment, Bid, UserListing, Category
@@ -93,7 +93,8 @@ class ListingForm(forms.Form):
         return url
 
 def index(request):
-    active_listings = Listing.objects.exclude(state=False).order_by('-created_at')
+    # active_listings = Listing.objects.exclude(state=False).order_by('-created_at')
+    active_listings = Listing.objects.exclude(state=False).order_by('-bid_change_at')
 
     for listing in active_listings:
         
@@ -213,9 +214,8 @@ def edit_listing(request, listing):
             listing_db.price = form.cleaned_data['price']
             listing_db.state = form.cleaned_data['state_change']
             listing_db.category = category_db
+            listing_db.updated_at = timezone.now()
             listing_db.save()
-
-
 
         # redirigir a show <<<<<<
             return HttpResponseRedirect(reverse("index"))    
@@ -252,6 +252,7 @@ def close_listing(request):
         ## Un mensaje de error o varios
         return HttpResponseRedirect(reverse("login"))
     
+    listing.updated_at = timezone.now()
     listing.closed = True
     listing.state = False
     listing.save()
@@ -263,13 +264,12 @@ def close_listing(request):
     
 def your_listings(request):
 
-
     # Validación
     if not request.user.is_authenticated:
         ## Un mensaje de error o varios
         return HttpResponseRedirect(reverse("login"))
     
-    listings = Listing.objects.filter(user=request.user).order_by('-created_at')
+    listings = Listing.objects.filter(user=request.user).order_by('-bid_change_at')
 
     for listing in listings:
         
@@ -284,6 +284,7 @@ def your_listings(request):
         "listings" : listings
     })
 
+# Add a listing to watchlist
 def watch_listing(request):
 
     if request.user.is_authenticated and request.method == "POST":
@@ -329,7 +330,7 @@ def watchlist(request):
 
     user_listings_db = UserListing.objects.filter(user=request.user)
     
-    listings = Listing.objects.filter(userlistings__in=user_listings_db).filter(state=True)
+    listings = Listing.objects.filter(userlistings__in=user_listings_db).filter(state=True).order_by('-bid_change_at')
 
 
     for listing in listings:
@@ -350,7 +351,7 @@ def categories_index(request):
 
     categories = Category.objects.annotate(
         listing_count=Count('listings', filter=Q(listings__state=True))
-    )
+    ).order_by('title')
 
     return render(request, "auctions/categories.html", {
         "categories" : categories
@@ -414,6 +415,7 @@ def your_bids(request):
 
     # # Busco todos los listing
     # listings_db = Listing.objects.all()
+    
     # # Calcula el max bid de cada listing
     # listings_max_bid = listings_db.annotate(max_bid_amount=Max('bids__amount'))
 
@@ -424,30 +426,65 @@ def your_bids(request):
 
 
 
+    # Obtengo todos los bids de este usuario
+    # Filtro los mas nuevos cuando se repita un listing
+    # Compruebo uno por uno si es un bid ganador
+    # Consulto uno por uno si es un bid perdedor
+    #
+    #
+    #
+    #
+
 
 
     ###
 
     # Busco todos los listings cerrados
     closed_listings = Listing.objects.filter(closed=True)
-
     # Agrego un elemento "bids__amount" a cada uno
     closed_max_bid = closed_listings.annotate(max_bid_amount=Max('bids__amount'))
-
-    # Filtro los Listing cuyo Bid más alto coincida con el usuario actual
+    # Listing cerrados cuyo Bid más alto coincida con el usuario actual
     won_listings = closed_max_bid.filter(bids__amount=F('max_bid_amount'), bids__user=request.user)
 
     # Agrego un flag a cada Listing
     for listing in won_listings:
         listing.won = True
 
-    # Busco los listing activos donde el usuario ha hecho algun bid
-    bids_db = Bid.objects.filter(user = request.user)
+
+    user_bids = Bid.objects.filter(user=request.user)
+
+    listings_bids = Listing.objects.filter(bids__in=user_bids)
+
+
+
+    # Busco todos los listings abiertos
+    open_listings = Listing.objects.filter(state=True)
+
+
+
+    pass
+
+    # Obtén los IDs de los bids más recientes de cada listing para el usuario
+    latest_bids = Bid.objects.filter(
+        user=request.user,
+        listing=OuterRef('listing')
+    ).order_by('-created_at').values('id')[:1]
+
+    # Filtra los bids para obtener solo los más recientes
+    bids_db = Bid.objects.filter(
+        id__in=Subquery(latest_bids)
+    )
+
+# ;<>>>>
+
+
+
+    
     # Listings abiertos donde el usuario ha bideado
     open_listings = Listing.objects.filter(bids__in=bids_db).filter(state=True)
     # Agrego bid máximo a cada listing filtrado
     open_max_bid = open_listings.annotate(max_bid_amount=Max('bids__amount'))
-
+    # Listings abiertos donde el usuario va perdiendo
     losing_listings = open_max_bid.exclude(max_bid_amount=F('bids__amount'), bids__user=request.user)
 
     for listing in losing_listings:
@@ -455,26 +492,33 @@ def your_bids(request):
 
 
 
+
+
+
+
+
+
     # Agrego todos los listings en un array
     listing_list = []
-
-    for listing in open_listings:
+    for listing_o in open_listings:
         # listing_list.append(listing)
 
-        for listing_2 in losing_listings:
-            if listing.id == listing_2.id:
-                
-                listing_list.append(listing_2)
-            else:
-                listing_list.append(listing)
 
+        listing_list.append(listing_o)
+        
+        
 
     for listing in won_listings:
         listing_list.append(listing)
 
+
+
+
     # for listing in losing_listings:
     #     listing_list.append(listing)
         
+
+
 
     # Busco el precio actual de cada listing
     for listing in listing_list:
@@ -519,6 +563,8 @@ def bid_listing(request):
             listing = listing
         )
 
+        listing.bid_change_at = timezone.now()
+        listing.save()
         new_bid.save()
 
     # Error, el monto no puede ser mas bajo que el actual

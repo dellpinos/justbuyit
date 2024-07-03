@@ -13,9 +13,9 @@
         <a href=" {% url 'show_listing' listing.id %}" class="listings__item">
           <div class="listings__img-container">
             {% if listing.image %}
-              <img class="listings__img" src="{{ listing.image }}" alt="{{ listing.title }} Image" />
+              <img class="listings__img" src="{{ listing.image }}" height="280px" alt="{{ listing.title }} Image" />
             {% else %}
-              <img class="listings__img--icon" src="{% static 'auctions/img/image-icon.svg' %}" alt="{{ listing.title }} Image" />
+              <img class="listings__img--icon" src="{% static 'auctions/img/image-icon.svg' %}"  alt="{{ listing.title }} Image" />
               <p>There isn't an image for {{ listing.title }}</p>
             {% endif %}
           </div>

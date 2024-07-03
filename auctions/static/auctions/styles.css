@@ -103,8 +103,13 @@ a {
     color: var(--red);
 }
 
+
 .c-green {
     color: var(--green)
+}
+
+.text-center {
+    text-align: center;
 }
 
 .ellipsis-2 {
@@ -244,6 +249,7 @@ a {
 
 .listings__img {
     max-width: 450px;
+    max-height: 280px;
 }
 
 .listings__opts {
@@ -324,7 +330,7 @@ a {
 }
 
 .listing-show__img {
-    width: 600px;
+    max-width: 600px;
 }
 
 .listing-show__img--icon {
@@ -380,6 +386,15 @@ a {
 
 .listing-show__bind button {
     margin: 0;
+}
+
+.listing-show__closed {
+    color: var(--red);
+    text-align: center;
+    font-size: 22px;
+    background-color: var(--lightRed);
+    padding: 5px 0;
+    border-left: 4px solid var(--red)
 }
 
 .listing-show__details {

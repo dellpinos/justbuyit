@@ -22,6 +22,7 @@ class Listing(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="listings", null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
+    bid_change_at = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
 
     def __str__(self):
