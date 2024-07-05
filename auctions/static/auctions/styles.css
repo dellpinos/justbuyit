@@ -16,7 +16,6 @@
     --green: #078F22;
 
     --mainFont: "Jost", sans-serif;
-
 }
 
 /* Basic */
@@ -25,11 +24,9 @@
 }
 
 html {
-
     box-sizing: border-box;
     height: 100%;
     scroll-behavior: smooth;
-
     font-family: var(--mainFont);
     padding: 0;
 }
@@ -41,7 +38,6 @@ body {
     /* Header Sticky */
     position: relative;
     padding-top: 140px;
-    
 }
 
 main {
@@ -71,7 +67,6 @@ h3, h4 {
 a {
     color: var(--white);
     text-decoration: none;
-
 }
 
 /* Helpers */
@@ -102,7 +97,6 @@ a {
 .c-red {
     color: var(--red);
 }
-
 
 .c-green {
     color: var(--green)
@@ -150,14 +144,11 @@ a {
 
 .alert-success {
     background-color: var(--green);
-    
 }
 
 .alert-error {
     background-color: var(--darkRed);
-
 }
-
 
 
 /* Header */
@@ -287,7 +278,6 @@ a {
     justify-content: center;
 }
 
-
 /* Listings Show */
 
 .listing-show__container {
@@ -305,14 +295,12 @@ a {
     color: var(--black);
     position: relative;
     z-index: 0;
-
 }
 
 .listing-show__watch {
     position: absolute;
     top: 60px;
     left: 60px;
-
 }
 
 .listing-show__watch img {
@@ -324,7 +312,6 @@ a {
     border: none;
     cursor: pointer;
 }
-
 
 .listing-show__watch button:hover {
     background-color: white;
@@ -395,7 +382,7 @@ a {
     text-align: center;
     font-weight: 700;
     color: var(--darkOrange);
-    font-size: clamp(20px, 70px, 70px);    /* <<<<<<< */
+    font-size: clamp(20px, 70px, 70px);    /* << << ToDo */
 }
 
 .listing-show__bind {
@@ -440,9 +427,6 @@ a {
     list-style-type: none;
     padding: 0;
 }
-.listing-show__details li {
-
-}
 
 .listing-show__comments {
     display: flex;
@@ -451,7 +435,6 @@ a {
     padding: 20px;
     background-color: var(--white);
     color: var(--black);
-
 }
 
 .listing-show__comment-form {
@@ -494,8 +477,6 @@ a {
     color: var(--blue);
     background-color: var(--lightBlue);
 }
-
-
 
 /* Auth */
 
@@ -597,7 +578,4 @@ a {
     >span {
         font-weight: 700;
     }
-
-
 }
-

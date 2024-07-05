@@ -197,7 +197,6 @@ def edit_listing(request, listing):
     if not request.user.is_authenticated or request.user != listing_db.user:
         return HttpResponseRedirect(reverse("index"))
     
-
     if request.method == 'POST':
 
         form = ListingForm(request.POST)
@@ -226,7 +225,6 @@ def edit_listing(request, listing):
         })
         
     else:
-
         form = ListingForm(initial={
             'title': listing_db.title,
             'description': listing_db.description,
@@ -236,7 +234,6 @@ def edit_listing(request, listing):
             'category': listing_db.category_id,
             'id_hidden': listing_db.id
         })
-
 
         return render(request, "auctions/edit.html", {
             "form": form,
@@ -353,7 +350,6 @@ def categories_index(request):
         "categories" : categories
     })
 
-
 def category_show(request, category):
         
     category = Category.objects.get(pk=category)
@@ -396,46 +392,38 @@ def create_comment(request):
     else:
         return HttpResponseRedirect(reverse("login"))
 
-
 def your_bids(request):
 
     # Auth
     if not request.user.is_authenticated:
         return HttpResponseRedirect(reverse("login"))
 
-    # Busco todos los listings cerrados
     closed_listings = Listing.objects.filter(closed=True)
-    # Agrego un elemento "bids__amount" a cada uno
+    # Add an element "bids__amount" to each
     closed_max_bid = closed_listings.annotate(max_bid_amount=Max('bids__amount'))
-    # Listing cerrados cuyo Bid más alto coincida con el usuario actual
+    # Closed listings whose highest bid matches the current user
     won_listings = closed_max_bid.filter(bids__amount=F('max_bid_amount'), bids__user=request.user)
 
-    # Agrego un flag a cada Listing
+    # Add a flag to each Listing
     for listing in won_listings:
         listing.won = True
 
-    # Busco todos los listings abiertos
     user_open_listings = Listing.objects.filter(state=True)
-
-    # Agrego un elemento "bids__amount" a cada uno
+    # Add an element "bids__amount" to each one
     open_max_bid = user_open_listings.annotate(max_bid_amount=Max('bids__amount'))
-
-    # Listings donde ha participado el usuario
+    # Filter listings where the user has participated
     listings_with_bids = open_max_bid.filter(bids__user=request.user)
 
     for listing in listings_with_bids:
-        # Obtén la puja más alta para este listing
+        # Get the highest bid for this listing
         highest_bid = Bid.objects.filter(listing=listing).order_by('-amount').first()
         
+        # Add a flag to each Listing
         if highest_bid and highest_bid.user == request.user:
-            # El usuario actual tiene la puja más alta en este Listing
             listing.losing = False
         else:
-            # El usuario no tiene la puja más alta en este Listing
             listing.losing = True
 
-
-    # # Agrego todos los listings en un array
     listing_list = []
 
     for listing in won_listings:
@@ -444,7 +432,7 @@ def your_bids(request):
     for listing in listings_with_bids:
         listing_list.append(listing)
 
-    # # Busco el precio actual de cada listing
+    # Find the current price of each listing
     for listing in listing_list:
         higher_bid = Bid.objects.filter(listing = listing).order_by('-amount').first()
 
