@@ -8,11 +8,21 @@
 {% block body %}
 
   <div class="listing-show__container">
-    {% if user.username == listing.user.username and listing.price != actual_price and listing.closed == False%}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% if user.username == listing.user.username and listing.price != actual_price and listing.closed == False %}
         <p class="listings__empty m-0">The edition is not available because there is at least one offer for this listing</p>
     {% endif %}
+    {% if listing.won_user %}
+        <p class="listing__sold m-0">You won this listing. Please contact {{ listing.user }}</p>
+    {% endif %}
     <div class="listing-show__item">
-        {% if request.user.is_authenticated %}
+        {% if request.user.is_authenticated and not listing.closed %}
             {% if user.username != listing.user.username %}
             <form method="POST" class="listing-show__watch" action="{% url 'watch_listing' %}">
                 {% csrf_token %}

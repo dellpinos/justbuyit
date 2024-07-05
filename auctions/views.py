@@ -1,18 +1,17 @@
 from bson import is_valid
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse
 from django import forms
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Q, Max, F, OuterRef, Subquery
+from django.db.models import Count, Q, Max, F
 from django.utils import timezone
 
-
 from .models import User, Listing, Comment, Bid, UserListing, Category
-
 
 # Listing form
 class ListingForm(forms.Form):
@@ -93,7 +92,7 @@ class ListingForm(forms.Form):
         return url
 
 def index(request):
-    # active_listings = Listing.objects.exclude(state=False).order_by('-created_at')
+
     active_listings = Listing.objects.exclude(state=False).order_by('-bid_change_at')
 
     for listing in active_listings:
@@ -175,6 +174,11 @@ def show_listing(request, listing):
         if comment_item:
             has_commented = True
 
+    if higher_bid.user == request.user and listing_db.closed:
+        listing_db.won_user = True
+    else:
+        listing_db.won_user = False
+    
 
     return render(request, "auctions/show.html", {
         "listing": listing_db,
@@ -191,17 +195,14 @@ def edit_listing(request, listing):
 
     # Auth
     if not request.user.is_authenticated or request.user != listing_db.user:
-
         return HttpResponseRedirect(reverse("index"))
     
-
 
     if request.method == 'POST':
 
         form = ListingForm(request.POST)
 
         if form.is_valid():
-
 
             if form.cleaned_data['category']:
                 category_db = Category.objects.get(pk=form.cleaned_data['category'])
@@ -217,8 +218,8 @@ def edit_listing(request, listing):
             listing_db.updated_at = timezone.now()
             listing_db.save()
 
-        # redirigir a show <<<<<<
-            return HttpResponseRedirect(reverse("index"))    
+            messages.success(request, 'Listing updated successfully!')
+            return redirect("show_listing", listing=listing_db.id)
         else:
             return render(request, "auctions/edit.html", {
             "form": form
@@ -246,27 +247,25 @@ def close_listing(request):
 
     listing = Listing.objects.get(pk=request.POST['listing_id'])
 
-
-    # Validación
+    # Auth
     if not request.user.is_authenticated or request.user != listing.user:
-        ## Un mensaje de error o varios
-        return HttpResponseRedirect(reverse("login"))
+        
+        messages.error(request, 'Something went wrong')
+        return redirect("index")
     
     listing.updated_at = timezone.now()
     listing.closed = True
     listing.state = False
     listing.save()
 
-    ###### Cambiar url
-    return HttpResponseRedirect(reverse("index"))
-
+    messages.success(request, 'The listing has been closed')
+    return redirect("show_listing", listing=listing.id)
 
     
 def your_listings(request):
 
-    # Validación
+    # Auth
     if not request.user.is_authenticated:
-        ## Un mensaje de error o varios
         return HttpResponseRedirect(reverse("login"))
     
     listings = Listing.objects.filter(user=request.user).order_by('-bid_change_at')
@@ -287,51 +286,49 @@ def your_listings(request):
 # Add a listing to watchlist
 def watch_listing(request):
 
+    # Auth
     if request.user.is_authenticated and request.method == "POST":
 
         watching = int(request.POST["listing_watch"])
 
         listing = request.POST["listing_id"]
         user = request.user
+        listing = Listing.objects.get(pk=listing)
+
         if watching:
             # Create item
 
-            listing = Listing.objects.get(pk=listing)
             user = request.user
-
             watchlist_item = UserListing(
                 user = user,
                 listing = listing
             )
             watchlist_item.save()
+            messages.success(request, 'Item added to watchlist')
+            return redirect("show_listing", listing=listing.id)
 
-        
         else:
             # Delete item
-
             watching_item = UserListing.objects.filter(user=user, listing=listing)
             watching_item.delete()
 
-
-        # Redirigir al usuario a su watchlist
-        ruta = reverse('index')
-
-
-        return HttpResponseRedirect(reverse("index"))
+            messages.success(request, 'Item removed from your watchlist')
+            return redirect("show_listing", listing=listing.id)
 
     else:
-    
-        # Agregar mensaje de error (no es post o no esta autenticado)
-        return HttpResponseRedirect(reverse("index"))
-
+        messages.error(request, 'Something went wrong')
+        return redirect("index")
 
 def watchlist(request):
 
+    # Only active listings are visible
+
+    # Auth
+    if not request.user.is_authenticated:
+        return HttpResponseRedirect(reverse("login"))
 
     user_listings_db = UserListing.objects.filter(user=request.user)
-    
     listings = Listing.objects.filter(userlistings__in=user_listings_db).filter(state=True).order_by('-bid_change_at')
-
 
     for listing in listings:
         
@@ -346,7 +343,6 @@ def watchlist(request):
         "listings": listings
     })
 
-
 def categories_index(request):
 
     categories = Category.objects.annotate(
@@ -358,12 +354,10 @@ def categories_index(request):
     })
 
 
-
 def category_show(request, category):
         
     category = Category.objects.get(pk=category)
     listings = category.listings.exclude(state=False).filter().order_by('-created_at')
-
 
     for listing in listings:
         
@@ -374,70 +368,40 @@ def category_show(request, category):
         else:
             listing.actual_price = higher_bid.amount
 
-
     return render(request, "auctions/show_category.html", {
         "category" : category,
         "listings": listings
     })
 
-
 def create_comment(request):
+    
+    # The user who created the listing cannot comment
+    # The user who has already commented cannot do so again
+    # Closed listings cannot be commented on
 
+    if request.user.is_authenticated and request.method == "POST":
 
-    # Validación
-    if not request.user.is_authenticated:
-        ## Un mensaje de error o varios
+        listing = Listing.objects.get(pk=request.POST['listing_id'])
+
+        new_comment = Comment(
+            message = request.POST['comment'],
+            user = request.user,
+            listing = listing
+        )
+        new_comment.save()
+
+        messages.success(request, 'Comment added')
+        return redirect("show_listing", listing=listing.id)
+    
+    else:
         return HttpResponseRedirect(reverse("login"))
-
-    listing = Listing.objects.get(pk=request.POST['listing_id'])
-
-    new_comment = Comment(
-        message = request.POST['comment'],
-        user = request.user,
-        listing = listing
-    )
-    new_comment.save()
-
-    # Redirigir a show
-    return HttpResponseRedirect(reverse("index"))
 
 
 def your_bids(request):
 
-## Se Muestran todos los listings donde participa el usuario
-
-## mensaje para saber si su oferta fue superada
-
-## mensaje para saber si se ha cerrado el listing y el ha ganado
-## no se muestran listings suspendidos
-## no se muestran listings cerrados donde el usuario haya perdido
-
-
-    # # Busco todos los listing
-    # listings_db = Listing.objects.all()
-    
-    # # Calcula el max bid de cada listing
-    # listings_max_bid = listings_db.annotate(max_bid_amount=Max('bids__amount'))
-
-    # # Won listings
-    # won_listings = listings_max_bid.filter(bids__amount=F('max_bid_amount'), bids__user=request.user, closed=True)
-    # # Lose listings
-    # lost_listings = listings_max_bid.filter(bids__amount=F('max_bid_amount')).exclude(bids__user=request.user)
-
-
-
-    # Obtengo todos los bids de este usuario
-    # Filtro los mas nuevos cuando se repita un listing
-    # Compruebo uno por uno si es un bid ganador
-    # Consulto uno por uno si es un bid perdedor
-    #
-    #
-    #
-    #
-
-
-
-    ###
+    # Auth
+    if not request.user.is_authenticated:
+        return HttpResponseRedirect(reverse("login"))
 
     # Busco todos los listings cerrados
     closed_listings = Listing.objects.filter(closed=True)
@@ -450,77 +414,37 @@ def your_bids(request):
     for listing in won_listings:
         listing.won = True
 
-
-    user_bids = Bid.objects.filter(user=request.user)
-
-    listings_bids = Listing.objects.filter(bids__in=user_bids)
-
-
-
     # Busco todos los listings abiertos
-    open_listings = Listing.objects.filter(state=True)
+    user_open_listings = Listing.objects.filter(state=True)
+
+    # Agrego un elemento "bids__amount" a cada uno
+    open_max_bid = user_open_listings.annotate(max_bid_amount=Max('bids__amount'))
+
+    # Listings donde ha participado el usuario
+    listings_with_bids = open_max_bid.filter(bids__user=request.user)
+
+    for listing in listings_with_bids:
+        # Obtén la puja más alta para este listing
+        highest_bid = Bid.objects.filter(listing=listing).order_by('-amount').first()
+        
+        if highest_bid and highest_bid.user == request.user:
+            # El usuario actual tiene la puja más alta en este Listing
+            listing.losing = False
+        else:
+            # El usuario no tiene la puja más alta en este Listing
+            listing.losing = True
 
 
-
-    pass
-
-    # Obtén los IDs de los bids más recientes de cada listing para el usuario
-    latest_bids = Bid.objects.filter(
-        user=request.user,
-        listing=OuterRef('listing')
-    ).order_by('-created_at').values('id')[:1]
-
-    # Filtra los bids para obtener solo los más recientes
-    bids_db = Bid.objects.filter(
-        id__in=Subquery(latest_bids)
-    )
-
-# ;<>>>>
-
-
-
-    
-    # Listings abiertos donde el usuario ha bideado
-    open_listings = Listing.objects.filter(bids__in=bids_db).filter(state=True)
-    # Agrego bid máximo a cada listing filtrado
-    open_max_bid = open_listings.annotate(max_bid_amount=Max('bids__amount'))
-    # Listings abiertos donde el usuario va perdiendo
-    losing_listings = open_max_bid.exclude(max_bid_amount=F('bids__amount'), bids__user=request.user)
-
-    for listing in losing_listings:
-        listing.losing = True
-
-
-
-
-
-
-
-
-
-    # Agrego todos los listings en un array
+    # # Agrego todos los listings en un array
     listing_list = []
-    for listing_o in open_listings:
-        # listing_list.append(listing)
-
-
-        listing_list.append(listing_o)
-        
-        
 
     for listing in won_listings:
         listing_list.append(listing)
 
+    for listing in listings_with_bids:
+        listing_list.append(listing)
 
-
-
-    # for listing in losing_listings:
-    #     listing_list.append(listing)
-        
-
-
-
-    # Busco el precio actual de cada listing
+    # # Busco el precio actual de cada listing
     for listing in listing_list:
         higher_bid = Bid.objects.filter(listing = listing).order_by('-amount').first()
 
@@ -529,64 +453,50 @@ def your_bids(request):
         else:
             listing.actual_price = higher_bid.amount
 
-
-
-
     return render(request, "auctions/your_bids.html", {
         "listings": listing_list
     })
 
 
-    
-
 def bid_listing(request):
 
-    listing = Listing.objects.get(pk=request.POST['listing_id'])
-    # Auth
-    bid = int(request.POST['bid'])
+    if request.user.is_authenticated and request.method == "POST":
 
-    # Validación
-    if not request.user.is_authenticated or request.user == listing.user or bid > 99999999 or bid < listing.price:
-        ## Un mensaje de error o varios
-        return HttpResponseRedirect(reverse("register"))
+        listing = Listing.objects.get(pk=request.POST['listing_id'])
+        bid = int(request.POST['bid'])
 
-    # Find actual price
-    actual_bid = Bid.objects.filter(listing = listing).order_by('-amount').first()
+        # Auth
+        if not request.user.is_authenticated or request.user == listing.user or bid > 99999999 or bid < listing.price:
 
-    if actual_bid is None or bid > int(actual_bid.amount):
+            messages.error(request, 'Your bid is lower than the current price')
+            return redirect("show_listing", listing=listing.id)
 
+        # Find actual price
+        actual_bid = Bid.objects.filter(listing = listing).order_by('-amount').first()
 
-        
-        new_bid = Bid(
-            amount = bid,
-            user = request.user,
-            listing = listing
-        )
+        if actual_bid is None or bid > int(actual_bid.amount):
 
-        listing.bid_change_at = timezone.now()
-        listing.save()
-        new_bid.save()
+            # Delete previous offer
+            old_bid = Bid.objects.filter(listing = listing, user = request.user)
+            if old_bid:
+                old_bid.delete()
 
-    # Error, el monto no puede ser mas bajo que el actual
+            new_bid = Bid(
+                amount = bid,
+                user = request.user,
+                listing = listing
+            )
 
-        
-    # buscar bid actual
-    # recibe "bid"
-    # recibe "listing_id"
+            listing.bid_change_at = timezone.now()
+            listing.save()
+            new_bid.save()
 
-    # menor a 99999999
-
-    # mayor al initial value o al actual price
-    # debe ser un numero
-
-    # mensaje de exito y agregar a lista de "listings bideados"
-
-    return HttpResponseRedirect(reverse("login"))
-
-
-
-
-    
+            return HttpResponseRedirect(reverse("your_bids"))
+        else:
+            messages.error(request, 'Your bid is lower than the current price')
+            return redirect("show_listing", listing=listing.id)
+    else:
+        return HttpResponseRedirect(reverse("login"))
 
 
 

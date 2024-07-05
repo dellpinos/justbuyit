@@ -8,6 +8,13 @@
 {% block body %}
   <h2>Active Listings</h2>
   <div class="listings__container">
+    {% if messages %}
+      {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+              {{ message }}
+          </div>
+      {% endfor %}
+    {% endif %}
     {% if listings %}
       {% for listing in listings %}
         <a href=" {% url 'show_listing' listing.id %}" class="listings__item">

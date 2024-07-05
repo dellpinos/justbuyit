@@ -140,6 +140,24 @@ a {
     margin: 0!important;
 }
 
+.alert {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    color: var(--white);
+    font-weight: 700;
+}
+
+.alert-success {
+    background-color: var(--green);
+    
+}
+
+.alert-error {
+    background-color: var(--darkRed);
+
+}
+
 
 
 /* Header */
@@ -202,6 +220,16 @@ a {
     font-size: 25px;
     border: 1px solid var(--silver);
     color: var(--silver);
+    padding: 30px;
+    width: 100%;
+    margin: 50px 0;
+    text-align: center;
+}
+
+.listing__sold {
+    font-size: 25px;
+    border: 1px solid var(--green);
+    color: var(--green);
     padding: 30px;
     width: 100%;
     margin: 50px 0;
