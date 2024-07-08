@@ -153,6 +153,7 @@ def show_listing(request, listing):
 
     listing_db = Listing.objects.get(pk=listing)
     comments = Comment.objects.filter(listing = listing)
+
     higher_bid = Bid.objects.filter(listing = listing).order_by('-amount').first()
 
     if higher_bid is None:
@@ -166,18 +167,18 @@ def show_listing(request, listing):
     if request.user.is_authenticated:
 
         user = request.user
-        watching_item = UserListing.objects.filter(user=user, listing=listing)
-        comment_item = Comment.objects.filter(user = user, listing=listing)
+        watching_item = UserListing.objects.filter(user = user, listing = listing)
+        comment_item = Comment.objects.filter(user = user, listing = listing)
 
         if watching_item:
             watching = True
         if comment_item:
             has_commented = True
 
-    if higher_bid.user == request.user and listing_db.closed:
-        listing_db.won_user = True
-    else:
-        listing_db.won_user = False
+        if higher_bid and higher_bid.user == request.user and listing_db.closed:
+            listing_db.won_user = True
+        else:
+            listing_db.won_user = False
     
 
     return render(request, "auctions/show.html", {
@@ -451,6 +452,12 @@ def bid_listing(request):
     if request.user.is_authenticated and request.method == "POST":
 
         listing = Listing.objects.get(pk=request.POST['listing_id'])
+
+        if not request.POST['bid']:
+             
+            messages.error(request, 'Bid field is required')
+            return redirect("show_listing", listing=listing.id)
+
         bid = int(request.POST['bid'])
 
         # Auth

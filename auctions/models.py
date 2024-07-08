@@ -26,7 +26,7 @@ class Listing(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
 
     def __str__(self):
-        return f"Title: {self.title}, description: {self.description} and initial price: {self.price}, category: {self.category}, state: {self.state}"
+        return f"Id: {self.id}, Title: {self.title}, and initial price: {self.price}, category: {self.category}, state: {self.state}"
 
 
 # Pivot User - Listing
@@ -45,7 +45,7 @@ class Bid(models.Model):
     updated_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"Amount: {self.amount}, User: {self.user}, Listing: {self.listing}"
+        return f" Id: {self.id}, amount: {self.amount}, User: {self.user}, Listing: {self.listing}"
 
 class Comment(models.Model):
     message = models.CharField(max_length=250)
@@ -55,6 +55,6 @@ class Comment(models.Model):
     updated_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"Comment: {self.message}, user: {self.user}, listing: {self.listing}"
+        return f"Id: {self.id}, comment: {self.message}, user: {self.user}, listing: {self.listing}"
 
 
