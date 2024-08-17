@@ -1,2 +1,5 @@
 README.md
 .env
+db.sqlite3
+djangoenv
+.vscode
